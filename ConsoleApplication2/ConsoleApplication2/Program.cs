@@ -70,21 +70,6 @@ namespace ConsoleApplication2
         }
         static void pre()//前置處理 pre()
         {
-            string pattern =
-              @"[^\"" ]+(?=\;\ |\:\ |\,\""|\.\""|\!\""|\?\""|,\ |\!\ |\?\ |\.\ |\.$|\!$|\?$|\.\n|\!\n|\?\n)"//抓後面標點符號的字詞
-            + @"|(?<=\ |\=)[^\"" \=]+(?=\ |\=)"//抓前面有空白或等於 後面也是空白或等於的字詞
-            + @"|(?<=\"")[^\"" \n]+(?=\ )"//抓前面有雙引號後面有空白的字詞
-            + @"|(?<= )[^\"" ]+(?=\"")"//抓前面有空白後面有雙引號的字詞
-            + @"|^[^\"" ]+(?=\ )"//抓開頭第一個 後面有空白的字詞
-            + @"|[\.,\?\!\""\:\;\=]"//標點符號抓住
-            + @"|(?<=\n)[^ \""]+(?=\ )"//抓前面有換行符號後面有空白的字詞 其實可以不用 這是自己測試文章的格式需要
-            + @"|(?<=\"")[^ \""]+(?=\"")";//抓前面有雙引號後面也有雙引號的字詞
-            //https://regex101.com/r/xR0KDO/3
-
-
-
-
-
 
             //首先讀黨 抓出driverless_2class.txt 全部句子 把句子和句子所屬傾向放到物件陣列
             string[] lines = System.IO.File.ReadAllLines(@"..\..\driverless_2class.txt");
@@ -264,11 +249,11 @@ namespace ConsoleApplication2
                 int actualValue = 0;
                 if (positive.TryGetValue(temptemptemp.Key, out actualValue))
                 {
-                    pcp[temptemptemp.Key] = Math.Log10((double)(positive[temptemptemp.Key]) + (double)(0.5) / (double)(positivenum) + (double)(0.5) * (double)(total.Count));
+                    pcp[temptemptemp.Key] = Math.Log10(((double)(positive[temptemptemp.Key]) + (double)(0.5)) /( (double)(positivenum) + (double)(0.5) * (double)(total.Count)));
                 }
                 if (negative.TryGetValue(temptemptemp.Key, out actualValue))
                 {
-                    ncp[temptemptemp.Key] = Math.Log10((double)(negative[temptemptemp.Key]) + (double)(0.5) / (double)(negativenum) + (double)(0.5) * (double)(total.Count));
+                    ncp[temptemptemp.Key] = Math.Log10(((double)(negative[temptemptemp.Key]) + (double)(0.5)) /( (double)(negativenum) + (double)(0.5) * (double)(total.Count)));
                 }
             }
             foreach (var te in pcp)
@@ -291,20 +276,32 @@ namespace ConsoleApplication2
         }
         static void a1(string sen, Dictionary<string, int> dict) 
         {
-            string[] temp =sen.Split(' ');
+            string pattern = @"[a-zA-Z]+([-]{1}[a-zA-Z]+)+"//複合字 例如a-b-c-d
+                            +@"|\:\("//表情符號
+                            +@"|\;\)"//表情符號
+                            +@"|\:\)"//表情符號
+                            +@"|->"//箭頭
+                            +@"|http:\/\/[^ \t]+"//網址
+                            +@"|[\d]{1,3}([,]{1}[\d]{3})+"//數字
+                            +@"|[^\- \t:\""!?;%.,()\[\]\&]+"//字詞
+                            +@"|[%\"":!?;,()\[\]\-\&]"//標點符號
+                            +@"|[.]{4}"//省略符號或沉默
+                            +@"|[.]{3}"//省略符號或沉默
+                            +@"|[.]{1}";//句點
 
-            foreach (string temptemp in temp)
+            foreach (Match m in Regex.Matches(sen, pattern))
             {
                 int actualValue = 0;
-                if (!dict.TryGetValue(temptemp, out actualValue))
+                if (!dict.TryGetValue(m.Value, out actualValue))
                 {
-                    dict[temptemp] = 1;
+                    dict[m.Value] = 1;
                 }
                 else
                 {
-                    dict[temptemp]++;
+                    dict[m.Value]++;
                 }
             }
+            
         }
         static async void WriteTextAsync(string text,string name)//非同步方式輸出 會暫存等待 解決資料同步問題
         {
@@ -313,49 +310,60 @@ namespace ConsoleApplication2
                 await outputFile.WriteAsync(text + "\n");
             }
         }
-
         static void naivebayes(string temp, Dictionary<string, double> pcp, Dictionary<string, double> ncp, int positivenum, int negativenum)//實際計算時 naivebayes()
         {
-
+            string pattern = @"[a-zA-Z]+([-]{1}[a-zA-Z]+)+"//複合字 例如a-b-c-d
+                            + @"|\:\("//表情符號
+                            + @"|\;\)"//表情符號
+                            + @"|\:\)"//表情符號
+                            + @"|->"//箭頭
+                            + @"|http:\/\/[^ \t]+"//網址
+                            + @"|[\d]{1,3}([,]{1}[\d]{3})+"//數字
+                            + @"|[^\- \t:\""!?;%.,()\[\]\&]+"//字詞
+                            + @"|[%\"":!?;,()\[\]\-\&]"//標點符號
+                            + @"|[.]{4}"//省略符號或沉默
+                            + @"|[.]{3}"//省略符號或沉默
+                            + @"|[.]{1}";//句點
 
             Console.WriteLine("\n{0,-100}{1,-100}\n\n", "word", "Log10 probability");
             double prolog1 = 0,prolog2 = 0;
+
             //把輸入句子斷字 每一個字詞查機率字典表得到該類別出現機率 並取log相加 最後比較哪一個類別總出現log比較大 那這個句子就是這個類別
-            string[] temps = temp.Split(' ');
-            for (int i = 0;i<temps.Length ;i++ )
+            foreach (Match m in Regex.Matches(temp, pattern))
             {
                 double rr = 0.0;
                 double actualValue = 0.0;
 
-                if (pcp.TryGetValue(temps[i], out actualValue))//1假使輸入句子中某字詞都出現在機率字典 直接查表算就好 因為公式裡每個變數都存在
+                if (pcp.TryGetValue(m.Value, out actualValue))//1假使輸入句子中某字詞都出現在機率字典 直接查表算就好 因為公式裡每個變數都存在
                 {
-                    rr += pcp[temps[i]];
+                    rr += pcp[m.Value];
                 }
                 else //2如果某字詞不存在 則重算公式 分子裡c(w,c)就是零 其餘查其他表帶入
                 {
-                    rr+=Math.Log10((double)(0.5) / (double)(positivenum) + (double)(0.5) * (double)(pcp.Count+ncp.Count));
+                    rr += Math.Log10((double)(0.5) / ((double)(positivenum) + (double)(0.5) * (double)(pcp.Count + ncp.Count)));
                 }
                 //沒有其他假設了 因為這個語言模型是天真貝氏 字詞出現機率彼此獨立不相關 不會有ngram那種前面字是否不存在字典的考慮
                 prolog1 += rr;
-                Console.WriteLine("{0,-100}{1,-100}", temps[i], rr);
+                Console.WriteLine("{0,-100}{1,-100}", m.Value, rr);
             }
             Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog1);
-            for (int i = 0; i < temps.Length; i++)
+
+            foreach (Match m in Regex.Matches(temp, pattern))
             {
                 double rr2 = 0.0;
                 double actualValue = 0.0;
 
-                if (ncp.TryGetValue(temps[i], out actualValue))//1假使輸入句子中某字詞都出現在機率字典 直接查表算就好 因為公式裡每個變數都存在
+                if (ncp.TryGetValue(m.Value, out actualValue))//1假使輸入句子中某字詞都出現在機率字典 直接查表算就好 因為公式裡每個變數都存在
                 {
-                    rr2 += ncp[temps[i]];
+                    rr2 += ncp[m.Value];
                 }
                 else //2如果某字詞不存在 則公式裡分子c(w,c)就是零 其餘查表帶入
                 {
-                    rr2 += Math.Log10((double)(0.5) / (double)(negativenum) + (double)(0.5) * (double)(pcp.Count + ncp.Count));
+                    rr2 += Math.Log10((double)(0.5) / ((double)(negativenum) + (double)(0.5) * (double)(pcp.Count + ncp.Count)));
                 }
                 //沒有其他假設了 因為這個語言模型是天真貝氏 字詞出現機率彼此獨立不相關 不會有ngram那種前面字是否不存在字典的考慮
                 prolog2 += rr2;
-                Console.WriteLine("{0,-100}{1,-100}", temps[i], rr2);
+                Console.WriteLine("{0,-100}{1,-100}", m.Value, rr2);
             }
             Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog2);
 
