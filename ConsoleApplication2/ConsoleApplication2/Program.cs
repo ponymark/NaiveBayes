@@ -249,11 +249,11 @@ namespace ConsoleApplication2
                 int actualValue = 0;
                 if (positive.TryGetValue(temptemptemp.Key, out actualValue))
                 {
-                    pcp[temptemptemp.Key] = Math.Log10(((double)(positive[temptemptemp.Key]) + (double)(0.5)) /( (double)(positivenum) + (double)(0.5) * (double)(total.Count)));
+                    pcp[temptemptemp.Key] = Math.Log10(((double)(positive[temptemptemp.Key]) + (double)(0.1)) /( (double)(positivenum) + (double)(0.1) * (double)(total.Count)));
                 }
                 if (negative.TryGetValue(temptemptemp.Key, out actualValue))
                 {
-                    ncp[temptemptemp.Key] = Math.Log10(((double)(negative[temptemptemp.Key]) + (double)(0.5)) /( (double)(negativenum) + (double)(0.5) * (double)(total.Count)));
+                    ncp[temptemptemp.Key] = Math.Log10(((double)(negative[temptemptemp.Key]) + (double)(0.1)) /( (double)(negativenum) + (double)(0.1) * (double)(total.Count)));
                 }
             }
             foreach (var te in pcp)
@@ -284,7 +284,7 @@ namespace ConsoleApplication2
                             +@"|http:\/\/[^ \t]+"//網址
                             +@"|[\d]{1,3}([,]{1}[\d]{3})+"//數字
                             +@"|[^\- \t:\""!?;%.,()\[\]\&]+"//字詞
-                            +@"|[%\"":!?;,()\[\]\-\&]"//標點符號
+                            //+@"|[%\"":!?;,()\[\]\-\&]"//標點符號
                             +@"|[.]{4}"//省略符號或沉默
                             +@"|[.]{3}"//省略符號或沉默
                             +@"|[.]{1}";//句點
@@ -320,15 +320,20 @@ namespace ConsoleApplication2
                             + @"|http:\/\/[^ \t]+"//網址
                             + @"|[\d]{1,3}([,]{1}[\d]{3})+"//數字
                             + @"|[^\- \t:\""!?;%.,()\[\]\&]+"//字詞
-                            + @"|[%\"":!?;,()\[\]\-\&]"//標點符號
+                            //+ @"|[%\"":!?;,()\[\]\-\&]"//標點符號
                             + @"|[.]{4}"//省略符號或沉默
                             + @"|[.]{3}"//省略符號或沉默
                             + @"|[.]{1}";//句點
 
-            Console.WriteLine("\n{0,-100}{1,-100}\n\n", "word", "Log10 probability");
+            Console.WriteLine("\n{0,-100}", "positive");
+            Console.WriteLine("{0,-100}{1,-100}\n\n", "word", "Log10 probability");
             double prolog1 = 0,prolog2 = 0;
 
-            //把輸入句子斷字 每一個字詞查機率字典表得到該類別出現機率 並取log相加 最後比較哪一個類別總出現log比較大 那這個句子就是這個類別
+            //算出該類別出現機率 即p(c)
+            prolog1 += Math.Log10((double)(positivenum) / (double)(positivenum + negativenum));
+            Console.WriteLine("{0,-100}{1,-100}", "Log10 probability of positive", prolog1);
+
+            //把輸入句子斷字 每一個字詞查機率字典表得到該字詞於類別出現機率 即p(w|c)的連乘 並取log相加 最後比較哪一個類別總出現log比較大 那這個句子就是這個類別
             foreach (Match m in Regex.Matches(temp, pattern))
             {
                 double rr = 0.0;
@@ -340,13 +345,19 @@ namespace ConsoleApplication2
                 }
                 else //2如果某字詞不存在 則重算公式 分子裡c(w,c)就是零 其餘查其他表帶入
                 {
-                    rr += Math.Log10((double)(0.5) / ((double)(positivenum) + (double)(0.5) * (double)(pcp.Count + ncp.Count)));
+                    rr += Math.Log10((double)(0.1) / ((double)(positivenum) + (double)(0.1) * (double)(pcp.Count + ncp.Count)));
                 }
                 //沒有其他假設了 因為這個語言模型是天真貝氏 字詞出現機率彼此獨立不相關 不會有ngram那種前面字是否不存在字典的考慮
                 prolog1 += rr;
                 Console.WriteLine("{0,-100}{1,-100}", m.Value, rr);
             }
             Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog1);
+            Console.WriteLine("\n{0,-100}", "---------------------------------------------------");
+            Console.WriteLine("\n{0,-100}", "negative");
+            Console.WriteLine("{0,-100}{1,-100}\n\n", "word", "Log10 probability");
+
+            prolog2 +=Math.Log10((double)(negativenum) / (double)(positivenum + negativenum));
+            Console.WriteLine("{0,-100}{1,-100}", "Log10 probability of negative", prolog2);
 
             foreach (Match m in Regex.Matches(temp, pattern))
             {
@@ -359,7 +370,7 @@ namespace ConsoleApplication2
                 }
                 else //2如果某字詞不存在 則公式裡分子c(w,c)就是零 其餘查表帶入
                 {
-                    rr2 += Math.Log10((double)(0.5) / ((double)(negativenum) + (double)(0.5) * (double)(pcp.Count + ncp.Count)));
+                    rr2 += Math.Log10((double)(0.1) / ((double)(negativenum) + (double)(0.1) * (double)(pcp.Count + ncp.Count)));
                 }
                 //沒有其他假設了 因為這個語言模型是天真貝氏 字詞出現機率彼此獨立不相關 不會有ngram那種前面字是否不存在字典的考慮
                 prolog2 += rr2;
