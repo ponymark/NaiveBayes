@@ -19,17 +19,34 @@ namespace ConsoleApplication2
     {
         static void Main(string[] args)
         {
-            if (File.Exists(@"..\..\pcp.txt") && File.Exists(@"..\..\ncp.txt") && File.Exists(@"..\..\positivenum.txt") && File.Exists(@"..\..\negativenum.txt"))
+            if (File.Exists(@"..\..\pcp.txt"))
             {
-                Console.WriteLine("偵測到存在正負機率字典與總字數");
-            }
-            else 
+                Console.WriteLine("偵測到存在過去紀錄pcp.txt，現予以清除重建");
+                File.Delete(@"..\..\pcp.txt");
+            } 
+            if (File.Exists(@"..\..\ncp.txt"))
             {
-                Console.WriteLine("偵測到不存在正負機率字典與總字數，開始建立");
-                pre();
-                Console.WriteLine("字典與字數建立完成");
+                Console.WriteLine("偵測到存在過去紀錄ncp.txt，現予以清除重建");
+                File.Delete(@"..\..\ncp.txt");
+            } 
+            if (File.Exists(@"..\..\positivenum.txt"))
+            {
+                Console.WriteLine("偵測到存在過去紀錄positivenum.txt，現予以清除重建");
+                File.Delete(@"..\..\positivenum.txt");
+            } 
+            if (File.Exists(@"..\..\negativenum.txt"))
+            {
+                Console.WriteLine("偵測到存在過去紀錄negativenum.txt，現予以清除重建");
+                File.Delete(@"..\..\negativenum.txt");
+            } 
+            if (File.Exists(@"..\..\the result of test.txt"))
+            {
+                Console.WriteLine("偵測到存在過去紀錄the result of test.txt，現予以清除重建");
+                File.Delete(@"..\..\the result of test.txt");
             }
-
+            Console.WriteLine("過去紀錄清除完畢，現在開始重建"); 
+            pre();
+            Console.WriteLine("重建紀錄完成");
 
             var pcp = File
                 .ReadAllLines(@"..\..\pcp.txt")
@@ -49,6 +66,13 @@ namespace ConsoleApplication2
             string[] n = File.ReadAllLines(@"..\..\negativenum.txt");
             int negativenum = Int32.Parse(n[0]);
 
+
+
+            test(pcp, ncp, positivenum, negativenum);
+            Console.WriteLine("測試結果資料建立完成");
+            
+
+
             while (true)
             {
 
@@ -58,7 +82,8 @@ namespace ConsoleApplication2
 
                 if (s != "-1")
                 {
-                    naivebayes(s, pcp, ncp, positivenum, negativenum);
+                    Console.WriteLine("\n{0,-100}\n\n", naivebayes(s, pcp, ncp, positivenum, negativenum,1));
+                    
                 }
                 else
                 {
@@ -307,10 +332,10 @@ namespace ConsoleApplication2
         {
             using (StreamWriter outputFile = new StreamWriter(@"..\..\"+name+".txt", true))
             {
-                await outputFile.WriteAsync(text + "\n");
+                await outputFile.WriteLineAsync(text);
             }
         }
-        static void naivebayes(string temp, Dictionary<string, double> pcp, Dictionary<string, double> ncp, int positivenum, int negativenum)//實際計算時 naivebayes()
+        static string naivebayes(string temp, Dictionary<string, double> pcp, Dictionary<string, double> ncp, int positivenum, int negativenum,int isouput)//實際計算時 naivebayes()
         {
             string pattern = @"[a-zA-Z]+([-]{1}[a-zA-Z]+)+"//複合字 例如a-b-c-d
                             + @"|\:\("//表情符號
@@ -324,15 +349,21 @@ namespace ConsoleApplication2
                             + @"|[.]{4}"//省略符號或沉默
                             + @"|[.]{3}"//省略符號或沉默
                             + @"|[.]{1}";//句點
+            
+            if (isouput == 1) 
+            {
+                Console.WriteLine("\n{0,-100}", "positive");
+                Console.WriteLine("{0,-100}{1,-100}\n\n", "word", "Log10 probability");            
+            }
 
-            Console.WriteLine("\n{0,-100}", "positive");
-            Console.WriteLine("{0,-100}{1,-100}\n\n", "word", "Log10 probability");
             double prolog1 = 0,prolog2 = 0;
 
             //算出該類別出現機率 即p(c)
             prolog1 += Math.Log10((double)(positivenum) / (double)(positivenum + negativenum));
-            Console.WriteLine("{0,-100}{1,-100}", "Log10 probability of positive", prolog1);
-
+            if (isouput == 1)
+            {
+                Console.WriteLine("{0,-100}{1,-100}", "Log10 probability of positive", prolog1);
+            }
             //把輸入句子斷字 每一個字詞查機率字典表得到該字詞於類別出現機率 即p(w|c)的連乘 並取log相加 最後比較哪一個類別總出現log比較大 那這個句子就是這個類別
             foreach (Match m in Regex.Matches(temp, pattern))
             {
@@ -349,16 +380,24 @@ namespace ConsoleApplication2
                 }
                 //沒有其他假設了 因為這個語言模型是天真貝氏 字詞出現機率彼此獨立不相關 不會有ngram那種前面字是否不存在字典的考慮
                 prolog1 += rr;
-                Console.WriteLine("{0,-100}{1,-100}", m.Value, rr);
+                if (isouput == 1)
+                {
+                    Console.WriteLine("{0,-100}{1,-100}", m.Value, rr);
+                }
             }
-            Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog1);
-            Console.WriteLine("\n{0,-100}", "---------------------------------------------------");
-            Console.WriteLine("\n{0,-100}", "negative");
-            Console.WriteLine("{0,-100}{1,-100}\n\n", "word", "Log10 probability");
 
+            if (isouput == 1)
+            {
+                Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog1);
+                Console.WriteLine("\n{0,-100}", "---------------------------------------------------");
+                Console.WriteLine("\n{0,-100}", "negative");
+                Console.WriteLine("{0,-100}{1,-100}\n\n", "word", "Log10 probability");
+            }
             prolog2 +=Math.Log10((double)(negativenum) / (double)(positivenum + negativenum));
-            Console.WriteLine("{0,-100}{1,-100}", "Log10 probability of negative", prolog2);
-
+            if (isouput == 1)
+            {
+                Console.WriteLine("{0,-100}{1,-100}", "Log10 probability of negative", prolog2);
+            }
             foreach (Match m in Regex.Matches(temp, pattern))
             {
                 double rr2 = 0.0;
@@ -374,23 +413,49 @@ namespace ConsoleApplication2
                 }
                 //沒有其他假設了 因為這個語言模型是天真貝氏 字詞出現機率彼此獨立不相關 不會有ngram那種前面字是否不存在字典的考慮
                 prolog2 += rr2;
-                Console.WriteLine("{0,-100}{1,-100}", m.Value, rr2);
+                if (isouput == 1)
+                {
+                    Console.WriteLine("{0,-100}{1,-100}", m.Value, rr2);
+                }
             }
-            Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog2);
-
+            if (isouput == 1)
+            {
+                Console.WriteLine("\n{0,-100}{1,-100}\n\n", "The sum of all probabilities", prolog2);
+            }
             if(prolog1>prolog2)
             {
-                Console.WriteLine("\n{0,-100}\n\n", "正向");
+                return "正向";
             }
             else if (prolog1 < prolog2)
             {
-                Console.WriteLine("\n{0,-100}\n\n", "負向");
+                return "負向";
             }
             else
             {
-                Console.WriteLine("\n{0,-100}\n\n", "不相上下");
+                return "中性";
             }
 
+        }
+        static void test(Dictionary<string, double> pcp, Dictionary<string, double> ncp, int positivenum, int negativenum) 
+        {
+            //首先讀黨 抓出driverless_2class.txt 全部句子 把句子和句子所屬傾向放到物件陣列
+            string[] lines = System.IO.File.ReadAllLines(@"..\..\driverless_2class_test.txt");
+            int status1 = 0;
+            
+            foreach (string line in lines)
+            {
+                if (status1 == 1)
+                {
+                    WriteTextAsync(String.Format("{0,-160}{1,-20}", line, naivebayes(line, pcp, ncp, positivenum, negativenum, 0)), "the result of test");
+                    status1 = 0;
+                }
+                else if (line.StartsWith("<id>"))
+                {
+                    status1 = 1;
+                }
+            }
+
+ 
         }
     }
 }
